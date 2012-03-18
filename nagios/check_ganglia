@@ -1,0 +1,104 @@
+#!/usr/bin/env ruby
+
+require 'rexml/document'
+require 'socket'
+require 'yaml'
+
+start = Time.now
+
+host, port = 'localhost', 8651
+command_file = 'nagios.cmd'
+config_file = 'check_ganglia.yml'
+#command_file = '/var/lib/nagios3/rw/nagios.cmd'
+#config_file = '/etc/nagios/check_ganglia.yml'
+$critical_count = 0
+$warning_count = 0
+$unkown_count = 0
+
+begin
+	# Load config file
+	Yaml = YAML.load_file config_file
+	Yaml.each do |title, conf|
+		conf['description'].gsub! '$?', '#{value}'
+		conf.each do |key, value|
+			value.gsub! /\$(\w+)\$/, 'val[\'\1\']'
+			value.gsub! '$?', 'value'
+		end
+		conf['description'].gsub! /^(.+)$/, '"\1"'
+	end
+	
+	# Open command file to write check output
+	Fout = File.open command_file, 'w'
+rescue Exception => e
+	puts e
+	exit 2
+end
+
+def check(val, result)
+	Yaml.each do |title, conf|
+		ret = result + "#{title};"
+		value = eval conf['value']
+		begin
+			if eval conf['critical']
+			 	Fout.print ret 
+			 	Fout.print "2;CHECKGANGLIA CRITICAL: "
+			 	$critical_count += 1
+			elsif eval conf['warning']
+				Fout.print ret 
+				Fout.print "1;CHECKGANGLIA WARNING: "
+				$warning_count += 1
+			else
+				Fout.print ret 
+				Fout.print "0;CHECKGANGLIA OK: "
+			end
+			Fout.puts eval conf['description']
+			
+		rescue Exception => e
+			Fout.print ret 
+			Fout.print "3;CHECKGANGLIA UNKOWN: "
+			Fout.puts e
+			$unkown_count += 1
+		end
+	end
+end
+
+# check_metric callback
+def check_metric(host)
+	val = {}
+	host.elements.each 'METRIC' do |metric|
+		metricname = metric.attribute('NAME').to_s
+		type = metric.attribute('TYPE').to_s
+		if type == 'string'
+			val[metricname] = metric.attribute('VAL').to_s
+		else
+			val[metricname] = metric.attribute('VAL').to_s.to_f
+		end		
+	end
+	
+	ip = host.attribute 'IP'
+	timestamp = host.attribute 'REPORTED'
+	ret = "[#{timestamp}] PROCESS_SERVICE_CHECK_RESULT;#{ip};"
+	check val, ret
+	
+end
+
+begin	
+	# Open Ganglia meta daemon socket and read xdl
+	TCPSocket.open(host, port) do |socket|
+		doc = REXML::Document.new socket
+		doc.elements.each '/GANGLIA_XML/GRID/CLUSTER/HOST' do |host|
+			check_metric host
+		end
+	end
+	
+	Fout.close
+rescue Exception => e
+	puts e
+	exit 2
+else
+	ret = "Ganglia Meta Daemon OK: Parser in #{Time.now - start}s|"
+	ret += "critical=#{$critical_count} warning=#{$warning_count} unkown=#{$unkown_count}"
+	puts ret
+end
+
+# [1331099619] PROCESS_SERVICE_CHECK_RESULT;localhost;Passive;1;Check Output|Performance Data
