@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-PROGRAMNAME = __FILE__[/(\w+?)(?=.rb)/]
+PROGRAMNAME = File.basename(__FILE__, '.rb')
 TIMEZONE = Time.now.strftime("%z").insert(-3, ':')
 $debug = $stdout
 

@@ -2,14 +2,12 @@
 require 'rubygems'
 
 require 'fssm'
-require 'find'
-
 require 'gangios/gdaemon'
 
 # $debug = nil
 
 WatchPath = {
-	'/tmp' => /.*\.log/
+	'/tmp' => '*.log'
 }
 
 $files = {}
@@ -17,18 +15,17 @@ $files = {}
 module LogReader
 	@files = {}
 	
-	WatchPath.each do |watchpath, regex|
-		Find.find(watchpath) do |path|
-			@files[path] = File.size(path) if File.file? path and regex === path
+	WatchPath.each do |watchpath, glob|
+		Dir.glob(File.join(watchpath, glob)) do |path|
+			@files[path] = File.size(path)
 		end
 	end
 
 	def self.start
 		FSSM.monitor do
-			WatchPath.each do |watchpath, regex|
+			WatchPath.each do |watchpath, glob|
 				proc = Proc.new do |base, relative|
-					path = File.join(base, relative)
-					next unless path =~ regex
+					next unless File.fnmatch? glob, relative
 					LogReader.analyze path
 				end
 
