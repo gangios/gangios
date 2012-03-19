@@ -58,7 +58,7 @@ module Gangios
         include Document
         field :name, type: String
         field :authority, type: String
-        field :localtime, type: Float
+        field :localtime, type: Integer
 
         has_many :clusters, summary: true
         has_many :hosts, summary: true, tag: 'HOSTS'
@@ -68,10 +68,10 @@ module Gangios
       class Cluster
         include Document
         field :name, type: String
+        field :localtime, type: Integer
         field :owner, type: String
         field :latlong, type: String
         field :url, type: String
-        field :localtime, type: Float
 
         has_many :hosts, summary: true, tag: 'HOSTS'
         has_many :metrics, summary: true
@@ -82,10 +82,10 @@ module Gangios
         define_init true
 
         field :name, type: String
-        field :type, type: String
-        field :units, type: String
         field :sum, type: Metric
         field :num, type: Integer
+        field :type, type: String
+        field :units, type: String
         field :group, type: Extra
         field :desc, type: Extra
         field :title, type: Extra
@@ -114,7 +114,28 @@ module Gangios
       end
     end
 
+    class Host
+      def initialize(host, cluster = nil, options = {})
+        if host.kind_of? Hash then
+          @data = host[:data]
+        elsif host.kind_of? String and cluster.kind_of? String then
+          options[:name] = host
+          @data = GMetad.get_data "/#{cluster}/#{host}", '/CLUSTER/HOST', options
+        else
+          raise ArgumentError
+        end
+      end
+    end
+
     class Metric
+    end
+
+    class Grids
+      include Document
+      define_init
+
+      include Finders
+      define_each Grid
     end
 
     class Clusters
@@ -130,7 +151,7 @@ module Gangios
       define_init
 
       include Finders
-      define_each Cluster, '//HOST'
+      define_each Host, '//HOST'
     end
 
     class Metrics
@@ -145,7 +166,7 @@ module Gangios
       include Document
       field :name, type: String
       field :authority, type: String
-      field :localtime, type: Float
+      field :localtime, type: Integer
 
       has_many :clusters
       has_many :hosts
@@ -154,12 +175,26 @@ module Gangios
     class Cluster
       include Document
       field :name, type: String
+      field :localtime, type: Integer
       field :owner, type: String
       field :latlong, type: String
       field :url, type: String
-      field :localtime, type: Float
 
       has_many :hosts
+      has_many :metrics
+    end
+
+    class Host
+      include Document
+      field :name, type: String
+      field :ip, type: String
+      field :reported, type: Integer
+      field :tn, type: Integer
+      field :tmax, type: Integer
+      field :dmax, type: Integer
+      field :location, type: String
+      field :gmond_started, type: Integer
+
       has_many :metrics
     end
 
@@ -168,9 +203,9 @@ module Gangios
       define_init true
 
       field :name, type: String
+      field :val, type: Metric
       field :type, type: String
       field :units, type: String
-      field :val, type: Metric
       field :tn, type: Integer
       field :tmax, type: Integer
       field :dmax, type: Integer
