@@ -25,9 +25,18 @@ module Gangios
             raise ArgumentError
           end
         end
+
       end
 
       class Metric
+      end
+
+      class Grids
+        include Document
+        define_init
+
+        include Finders
+        define_each
       end
 
       class Clusters
@@ -35,7 +44,7 @@ module Gangios
         define_init
 
         include Finders
-        define_each Cluster
+        define_each
       end
 
       class Hosts
@@ -60,9 +69,9 @@ module Gangios
         field :authority, type: String
         field :localtime, type: Integer
 
-        has_many :clusters, summary: true
-        has_many :hosts, summary: true, tag: 'HOSTS'
-        has_many :metrics, summary: true
+        has_many :clusters
+        has_many :hosts, tag: 'HOSTS'
+        has_many :metrics
       end
 
       class Cluster
@@ -73,8 +82,11 @@ module Gangios
         field :latlong, type: String
         field :url, type: String
 
-        has_many :hosts, summary: true, tag: 'HOSTS'
-        has_many :metrics, summary: true
+        has_many :hosts, tag: 'HOSTS'
+        has_many :metrics
+
+        include Finders
+        define_all "/?filter=summary", '/CLUSTER'
       end
 
       class Metric
@@ -135,7 +147,7 @@ module Gangios
       define_init
 
       include Finders
-      define_each Grid
+      define_each
     end
 
     class Clusters
@@ -143,7 +155,7 @@ module Gangios
       define_init
 
       include Finders
-      define_each Cluster
+      define_each
     end
 
     class Hosts
@@ -159,7 +171,7 @@ module Gangios
       define_init
 
       include Finders
-      define_each Metric
+      define_each
     end
 
     class Grid
@@ -182,6 +194,9 @@ module Gangios
 
       has_many :hosts
       has_many :metrics
+
+      include Finders
+      define_all "/", '/CLUSTER'
     end
 
     class Host
@@ -196,6 +211,9 @@ module Gangios
       field :gmond_started, type: Integer
 
       has_many :metrics
+
+      include Finders
+      define_all "/", '/CLUSTER/HOST'
     end
 
     class Metric

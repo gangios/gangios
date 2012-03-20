@@ -8,12 +8,7 @@ module Gangios
     end
 
     module ClassMethods
-      # Redefine the method. Will undef the method if it exists or simply
-      # just define it.
-      def re_define_method(name, &block)
-        undef_method(name) if method_defined?(name)
-        define_method(name, &block)
-      end
+      include Define
 
       # Returns an array of names for the attributes available on this object
       # Rails v3.1+ uses this meathod to automatically wrap params in JSON requests
@@ -80,7 +75,7 @@ module Gangios
       def has_many(name, options = {})
         # get klass:Class from classname:String
         classname = name.to_s.capitalize
-        if options[:summary] then
+        if self.to_s.include? 'Summary' then
           klass = classname.to_class(Gangios::Base::Summary)
         else
           klass = classname.to_class(Gangios::Base)
