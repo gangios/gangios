@@ -1,7 +1,6 @@
 require "gangios/utiles"
 require "gangios/gmetad"
 require "gangios/document"
-require "gangios/finders"
 
 module Gangios
   module Base
@@ -9,23 +8,29 @@ module Gangios
     # ##############################
     # Summary data ?filter=summary
       class Grid
-        def initialize(options = {})
-          @data = GMetad.get_data "/?filter=summary", '/', options
-        end
-      end
-
-      class Cluster
-        def initialize(cluster, options = {})
-          if cluster.kind_of? Hash then
-            @data = cluster[:data]
-          elsif cluster.kind_of? String then
-            options[:name] = cluster
-            @data = GMetad.get_data "/#{cluster}?filter=summary", '/CLUSTER', options
+        def initialize grid
+          @data = {}
+          if grid.kind_of? Hash then
+            @data[:ganglia] = grid[:data]
+          elsif grid.kind_of? String then
+            @data[:ganglia] = GMetad.get_data "/?filter=summary", "/GRID", grid
           else
             raise ArgumentError
           end
         end
+      end
 
+      class Cluster
+        def initialize cluster
+          @data = {}
+          if cluster.kind_of? Hash then
+            @data[:ganglia] = cluster[:data]
+          elsif cluster.kind_of? String then
+            @data[:ganglia] = GMetad.get_data "/#{cluster}?filter=summary", "/GRID/CLUSTER", cluster
+          else
+            raise ArgumentError
+          end
+        end
       end
 
       class Metric
@@ -34,17 +39,13 @@ module Gangios
       class Grids
         include Document
         define_init
-
-        include Finders
-        define_each
+        define_finders
       end
 
       class Clusters
         include Document
         define_init
-
-        include Finders
-        define_each
+        define_finders
       end
 
       class Hosts
@@ -58,9 +59,7 @@ module Gangios
       class Metrics
         include Document
         define_init
-
-        include Finders
-        define_each Metric, 'METRICS'
+        define_finders "METRICS"
       end
 
       class Grid
@@ -70,8 +69,10 @@ module Gangios
         field :localtime, type: Integer
 
         has_many :clusters
-        has_many :hosts, tag: 'HOSTS'
+        has_many :hosts, tag: "HOSTS"
         has_many :metrics
+
+        define_class_finders
       end
 
       class Cluster
@@ -82,16 +83,15 @@ module Gangios
         field :latlong, type: String
         field :url, type: String
 
-        has_many :hosts, tag: 'HOSTS'
+        has_many :hosts, tag: "HOSTS"
         has_many :metrics
 
-        include Finders
-        define_all "/?filter=summary", '/CLUSTER'
+        define_class_finders
       end
 
       class Metric
         include Document
-        define_init true
+        define_init
 
         field :name, type: String
         field :sum, type: Metric
@@ -108,18 +108,25 @@ module Gangios
     # ##############################
     # All data without ?filter
     class Grid
-      def initialize(options = {})
-        @data = GMetad.get_data "/", '/', options
+      def initialize grid
+        @data = {}
+        if grid.kind_of? Hash then
+          @data[:ganglia] = grid[:data]
+        elsif grid.kind_of? String then
+          @data[:ganglia] = GMetad.get_data "/", "/GRID", grid
+        else
+          raise ArgumentError
+        end
       end
     end
 
     class Cluster
-      def initialize(cluster, options = {})
+      def initialize cluster
+        @data = {}
         if cluster.kind_of? Hash then
-          @data = cluster[:data]
+          @data[:ganglia] = cluster[:data]
         elsif cluster.kind_of? String then
-          options[:name] = cluster
-          @data = GMetad.get_data "/#{cluster}", '/CLUSTER', options
+          @data[:ganglia] = GMetad.get_data "/#{cluster}", "/GRID/CLUSTER", cluster
         else
           raise ArgumentError
         end
@@ -127,12 +134,16 @@ module Gangios
     end
 
     class Host
-      def initialize(host, cluster = nil, options = {})
+      def initialize host, cluster = nil
+        @data = {}
         if host.kind_of? Hash then
-          @data = host[:data]
-        elsif host.kind_of? String and cluster.kind_of? String then
-          options[:name] = host
-          @data = GMetad.get_data "/#{cluster}/#{host}", '/CLUSTER/HOST', options
+          @data[:ganglia] = host[:data]
+        elsif host.kind_of? String then
+          if cluster.kind_of? String then
+            @data[:ganglia] = GMetad.get_data "/#{cluster}/#{host}", "/GRID/CLUSTER/HOST", host
+          elsif cluster.nil? then
+            @data[:ganglia] = GMetad.get_data "/", "//HOST[@NAME='#{host}']", host
+          end
         else
           raise ArgumentError
         end
@@ -145,33 +156,25 @@ module Gangios
     class Grids
       include Document
       define_init
-
-      include Finders
-      define_each
+      define_finders
     end
 
     class Clusters
       include Document
       define_init
-
-      include Finders
-      define_each
+      define_finders
     end
 
     class Hosts
       include Document
       define_init
-
-      include Finders
-      define_each Host, '//HOST'
+      define_finders
     end
 
     class Metrics
       include Document
       define_init
-
-      include Finders
-      define_each
+      define_finders
     end
 
     class Grid
@@ -182,6 +185,8 @@ module Gangios
 
       has_many :clusters
       has_many :hosts
+
+      define_class_finders
     end
 
     class Cluster
@@ -195,8 +200,7 @@ module Gangios
       has_many :hosts
       has_many :metrics
 
-      include Finders
-      define_all "/", '/CLUSTER'
+      define_class_finders
     end
 
     class Host
@@ -212,13 +216,12 @@ module Gangios
 
       has_many :metrics
 
-      include Finders
-      define_all "/", '/CLUSTER/HOST'
+      define_class_finders
     end
 
     class Metric
       include Document
-      define_init true
+      define_init
 
       field :name, type: String
       field :val, type: Metric
