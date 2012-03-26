@@ -9,6 +9,11 @@ module Gangios
       @@host, @@port = host, port
     end
 
+    def self.ready?
+      TCPSocket.new(@@host, @@port) rescue return false
+      return true
+    end
+
     # use request and host:port
     # default host:port are localhost:8652
     # return a REXML::Document object
@@ -23,16 +28,10 @@ module Gangios
       return doc
     end
 
-    def self.get_data request, xpath, rname = nil
+    def self.get_data request, xpath = ''
       doc = GMetad.get_doc request
       xpath = '/GANGLIA_XML' + xpath
-      ret = doc.elements[xpath]
-      if rname then
-          lname = ret.attribute('NAME').to_s
-          raise ArgumentError, "No such cluster - #{rname}" unless lname == rname
-      end
-      raise RuntimeError, "No data" if ret.nil?
-      return ret
+      doc.elements[xpath]
     end
   end
 end

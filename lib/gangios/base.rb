@@ -1,238 +1,101 @@
-require "gangios/utiles"
-require "gangios/gmetad"
-require "gangios/document"
+require File.join(File.dirname(__FILE__), "document")
+
+debug "Start Initialize Main Program", true
 
 module Gangios
   module Base
+    class Enumerator
+      include Document
+
+      attr_reader :klass, :options
+
+      def initialize klass, data = {}, options = {}
+        if data.kind_of? Hash and klass.kind_of? Class then
+          @data = data
+          @klass = klass
+          @options = options if options.kind_of? Hash
+        else
+          raise ArgumentError
+        end
+
+        call_initialize_procs
+      end
+    end
+
     module Summary
     # ##############################
-    # Summary data ?filter=summary
-      class Grid
-        def initialize grid
-          @data = {}
-          if grid.kind_of? Hash then
-            @data[:ganglia] = grid[:data]
-          elsif grid.kind_of? String then
-            @data[:ganglia] = GMetad.get_data "/?filter=summary", "/GRID", grid
-          else
-            raise ArgumentError
-          end
-        end
-      end
-
-      class Cluster
-        def initialize cluster
-          @data = {}
-          if cluster.kind_of? Hash then
-            @data[:ganglia] = cluster[:data]
-          elsif cluster.kind_of? String then
-            @data[:ganglia] = GMetad.get_data "/#{cluster}?filter=summary", "/GRID/CLUSTER", cluster
-          else
-            raise ArgumentError
-          end
-        end
-      end
-
-      class Metric
-      end
-
-      class Grids
-        include Document
-        define_init
-        define_finders
-      end
-
-      class Clusters
-        include Document
-        define_init
-        define_finders
-      end
-
-      class Hosts
-        include Document
-        define_init
-
-        field :up, type: Integer
-        field :down, type: Integer
-      end
-
-      class Metrics
-        include Document
-        define_init
-        define_finders "METRICS"
-      end
-
+    # Summary data
       class Grid
         include Document
-        field :name, type: String
-        field :authority, type: String
-        field :localtime, type: Integer
-
-        has_many :clusters
-        has_many :hosts, tag: "HOSTS"
-        has_many :metrics
-
-        define_class_finders
+        def_grid_init
       end
 
       class Cluster
         include Document
-        field :name, type: String
-        field :localtime, type: Integer
-        field :owner, type: String
-        field :latlong, type: String
-        field :url, type: String
-
-        has_many :hosts, tag: "HOSTS"
-        has_many :metrics
-
-        define_class_finders
+        def_cluster_init
       end
 
       class Metric
         include Document
-        define_init
 
-        field :name, type: String
-        field :sum, type: Metric
-        field :num, type: Integer
-        field :type, type: String
-        field :units, type: String
-        field :group, type: Extra
-        field :desc, type: Extra
-        field :title, type: Extra
-        alias_method :val, :sum
+        def initialize metric, cluster = nil, grid = nil
+          args = {}
+
+          if metric.kind_of? Hash then
+            @data = metric
+          elsif metric.kind_of? String and host.kind_of? String then
+            @data = {}
+            args[:metric] = metric
+            args[:cluster] = cluster if cluster.kind_of? String
+            args[:grid] = grid if grid.kind_of? String
+          else
+            raise ArgumentError
+          end
+
+          call_initialize_procs args
+        end
       end
     end
 
     # ##############################
-    # All data without ?filter
-    class Grid
-      def initialize grid
-        @data = {}
-        if grid.kind_of? Hash then
-          @data[:ganglia] = grid[:data]
-        elsif grid.kind_of? String then
-          @data[:ganglia] = GMetad.get_data "/", "/GRID", grid
-        else
-          raise ArgumentError
-        end
-      end
-    end
-
-    class Cluster
-      def initialize cluster
-        @data = {}
-        if cluster.kind_of? Hash then
-          @data[:ganglia] = cluster[:data]
-        elsif cluster.kind_of? String then
-          @data[:ganglia] = GMetad.get_data "/#{cluster}", "/GRID/CLUSTER", cluster
-        else
-          raise ArgumentError
-        end
-      end
-    end
-
-    class Host
-      def initialize host, cluster = nil
-        @data = {}
-        if host.kind_of? Hash then
-          @data[:ganglia] = host[:data]
-        elsif host.kind_of? String then
-          if cluster.kind_of? String then
-            @data[:ganglia] = GMetad.get_data "/#{cluster}/#{host}", "/GRID/CLUSTER/HOST", host
-          elsif cluster.nil? then
-            @data[:ganglia] = GMetad.get_data "/", "//HOST[@NAME='#{host}']", host
-          end
-        else
-          raise ArgumentError
-        end
-      end
-    end
-
-    class Metric
-    end
-
-    class Grids
-      include Document
-      define_init
-      define_finders
-    end
-
-    class Clusters
-      include Document
-      define_init
-      define_finders
-    end
-
-    class Hosts
-      include Document
-      define_init
-      define_finders
-    end
-
-    class Metrics
-      include Document
-      define_init
-      define_finders
-    end
-
+    # All data
     class Grid
       include Document
-      field :name, type: String
-      field :authority, type: String
-      field :localtime, type: Integer
-
-      has_many :clusters
-      has_many :hosts
-
-      define_class_finders
+      def_grid_init
     end
 
     class Cluster
       include Document
-      field :name, type: String
-      field :localtime, type: Integer
-      field :owner, type: String
-      field :latlong, type: String
-      field :url, type: String
-
-      has_many :hosts
-      has_many :metrics
-
-      define_class_finders
+      def_cluster_init
     end
 
     class Host
       include Document
-      field :name, type: String
-      field :ip, type: String
-      field :reported, type: Integer
-      field :tn, type: Integer
-      field :tmax, type: Integer
-      field :dmax, type: Integer
-      field :location, type: String
-      field :gmond_started, type: Integer
-
-      has_many :metrics
-
-      define_class_finders
+      def_host_init
     end
 
     class Metric
       include Document
-      define_init
 
-      field :name, type: String
-      field :val, type: Metric
-      field :type, type: String
-      field :units, type: String
-      field :tn, type: Integer
-      field :tmax, type: Integer
-      field :dmax, type: Integer
-      field :group, type: Extra
-      field :desc, type: Extra
-      field :title, type: Extra
+      def initialize metric, host, cluster = nil, grid = nil
+        args = {}
+
+        if metric.kind_of? Hash then
+          @data = metric
+        elsif metric.kind_of? String and host.kind_of? String then
+          @data = {}
+          args[:metric] = metric
+          args[:host] = host
+          args[:cluster] = cluster if cluster.kind_of? String
+          args[:grid] = grid if grid.kind_of? String
+        else
+          raise ArgumentError
+        end
+
+        call_initialize_procs args
+      end
     end
   end
 end
+
+debug "Main Program Load Success"

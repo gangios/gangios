@@ -1,18 +1,8 @@
 #!/usr/bin/env ruby
+require File.join(File.dirname(__FILE__), "utiles")
+
 PROGRAMNAME = File.basename(__FILE__, '.rb')
 TIMEZONE = Time.now.strftime("%z").insert(-3, ':')
-$debug = $stdout
-
-def flush
-	$stdout.flush
-end
-
-def debug info
-	if $debug then
-		$debug.puts info.to_s 
-		$debug.flush
-	end
-end	
 
 module Gangios
 	module GDaemon
