@@ -1,145 +1,81 @@
 require "rexml/document"
-require "gangios/utiles"
 
 module Gangios
   module Document
     module Ganglia
       def self.included base
-        base.extend(Methods)
+        base.extend Methods
       end
 
-      module Methods
+      module MethodsBase
         include Define
+        def plugin
+          :gmetad
+        end
 
         def add_ganglia_init request = nil, xpath = nil
-          classname = self.to_s
-          if classname.include? 'Summary' then
-            request_suffix = '?filter=summary'
-          else
-            request_suffix = nil
-          end
-
-          type = classname.split('::').last.downcase.to_sym
-
-          add_initialize_proc do |args = nil|
+          add_init_proc do |args = nil|
             next if @data.has_key? :gmetad
 
             # work for gmetad request and rexml xpath
-            if request.nil? then
-              case type
-              when :grid
-                request = "/#{request_suffix}"
-                xpath = "/GRID"
-              when :cluster
-                request = "/#{args[:cluster]}#{request_suffix}"
-                xpath = "/GRID"
-                xpath += "[@NAME='#{args[:grid]}']" if args.has_key? :grid
-                xpath += "/CLUSTER"
-                xpath += "[@NAME='#{args[:cluster]}']" if args.has_key? :cluster
-                xpath += "/HOST"
-              when :host
-                if args.has_key? :cluster then
-                  request = "/#{args[:cluster]}/#{args[:host]}#{request_suffix}"
-                else
-                  request = "/#{request_suffix}"
-                end
-                xpath = "/GRID"
-                xpath += "[@NAME='#{args[:grid]}']" if args.has_key? :grid
-                xpath += "/CLUSTER"
-              when :metric
-                if request_suffix then
-                  if args.has_key? :cluster then
-                    request = "/#{args[:cluster]}#{request_suffix}"
-                    xpath = "/GRID"
-                    xpath += "[@NAME='#{args[:grid]}']" if args.has_key? :grid
-                    xpath += "/CLUSTER[@NAME='#{args[:cluster]}']"
-                    xpath += "/METRICS"
-                  else
-                    request = "/#{request_suffix}"
-                    xpath = "/GRID"
-                    xpath += "[@NAME='#{args[:grid]}']" if args.has_key? :grid
-                    xpath += "/METRICS"
-                  end
-                else
-                  if args.has_key? :host then
-                    if args.has_key? :cluster then
-                      request = "/#{args[:cluster]}/#{args[:host]}#{request_suffix}"
-                    else
-                      request = "/#{request_suffix}"
-                    end
-                    xpath = "/GRID"
-                    xpath += "[@NAME='#{args[:grid]}']" if args.has_key? :grid
-                    xpath += "/CLUSTER"
-                    xpath += "[@NAME='#{args[:cluster]}']" if args.has_key? :cluster
-                    xpath += "/METRIC"
-                  else
-                    raise "No hostname to get metric - #{name}"
-                  end
-                end
-              else
-                raise "Unknown type - #{type}"
-              end
-            end
-
-            name = args[type]
-            raise "Nil XPath" if xpath.nil?
-            xpath += "[@NAME='#{name}']" if name
+            request = GMetad.get_request type, args unless request
+            xpath = GMetad.get_xpath type, args unless xpath
 
             @data[:gmetad] = GMetad.get_data request, xpath
             debug "Get GMetad Data #{@data[:gmetad].inspect}"
-            raise "No such #{type} - #{name}" if @data[:gmetad].nil?
+            raise "No such #{type} - #{args}" if @data[:gmetad].nil?
           end
         end
 
         # Define attributes reading data from xml
-        # use @data[:gmetad](REXML::Element)
+        # use @data[:gmetad_summary](REXML::Element)
         # the attribute return a string
         def field(name, options = {})
-          type = options[:type].to_s.split('::').last
+          type = options[:type]
+          database = options[:database] || plugin
+          debug "Create Field #{name} as #{type} use database #{database}"
+          unless [:String, :Integer, :Float, :Metric, :Extra, :Custom].include? type
+            raise ArgumentError, "unknown type - #{type}"
+          end
+          if type == :Extra then
+            type = :String
+            options[:xpath] = "" unless options[:xpath]
+            options[:xpath] += "EXTRA_DATA/EXTRA_ELEMENT[@NAME='#{name.to_s.upcase}']"
+            options[:attribute] = "VAL"
+          end
+
           self.add_attribute_names name
-          case type
-          when 'String'
-            safe_define_method name do
-              @data[:gmetad].attribute(name.to_s.upcase).to_s
-            end
-          when 'Integer'
-            safe_define_method name do
-              @data[:gmetad].attribute(name.to_s.upcase).to_s.to_i
-            end
-          when 'Float'
-            safe_define_method name do
-              @data[:gmetad].attribute(name.to_s.upcase).to_s.to_f
-            end
-          when 'Metric'
-            safe_define_method name do
-              type = @data[:gmetad].attribute('TYPE').to_s
-              ret = @data[:gmetad].attribute(name.to_s.upcase).to_s
+
+          safe_define_method name do
+            element = @data[database]
+            element = element.elements[options[:xpath]] if options.has_key? :xpath
+            attr_name = options[:attribute] || name.to_s.upcase
+            attribute = element.attribute(attr_name).to_s if element
+
+            case type
+            when :String
+              return attribute
+            when :Integer
+              return attribute.to_i
+            when :Float
+              return attribute.to_f
+            when :Metric
+              mtype = element.attribute('TYPE').to_s if element
 
               # ganglia check result has 5 types
               # double float uint16 uint32 string
-              case type
+              case mtype
               when 'double', 'float'
-                return ret.to_f if ret.include? '.'
-                ret.to_i
+                return attribute.to_f if attribute.include? '.'
+                return attribute.to_i
               when 'uint16', 'uint32'
-                ret.to_i
+                return attribute.to_i
               else
-                ret
+                return attribute
               end
+            when :Custom
+              return attribute
             end
-          when 'Extra'
-            safe_define_method name do
-              element = @data[:gmetad].elements["EXTRA_DATA/EXTRA_ELEMENT[@NAME='#{name.to_s.upcase}']"]
-              element.attribute('VAL').to_s if element
-            end
-          when 'Custom'
-            safe_define_method name do
-              element = @data[:gmetad].elements[options[:xpath]] if options.has_key? :xpath
-              attr_name = options[:attribute] || name.to_s.upcase
-              element.attribute(attr_name).to_s if element
-            end
-          else
-            raise ArgumentError, "unknown type - #{type}"
           end
 
           # alias name to id
@@ -153,42 +89,47 @@ module Gangios
         def has_many(name, options = {})
           # get klass:Class from classname:String
           classname = name.to_s.chop.capitalize
-          if self.to_s.include? 'Summary' then
-            klass = classname.to_class(Gangios::Base::Summary)
-          else
-            klass = classname.to_class(Gangios::Base)
-          end
 
-          enum_klass = options[:klass] || Base::Enumerator
+          klass = options[:klass] || classname.to_class(Gangios::Base)
           xpath = options[:xpath] || "//#{name.to_s.chop.upcase}"
+          enumerator = options[:enumerator] || Base::Enumerator
 
           safe_define_method name do |options = {}|
+            options[:cluster] = name if self.class == Base::Cluster
             options[:xpath] = xpath
-            enum_klass.new klass, @data, options
+            enumerator.new klass, @data, options
           end
         end
 
-        # define all find etc. as class method
-        # for Grid Cluster & Host
-        def def_class_finders
+        # define a function to get parent
+        def belongs_to(name, options = {})
           # get klass:Class from classname:String
-          if classname.include? 'Summary' then
-            request = '/?filter=summary'
-          else
-            request = '/'
+          classname = name.to_s.capitalize
+
+          klass = options[:klass] || classname.to_class(Gangios::Base)
+          xpath = options[:xpath] || ".."
+
+          safe_define_method name do |options = {}|
+            @data[database].elements[xpath]
+            klass.new @data
           end
+        end
+      end
 
-          re_define_class_method :all do |options = {}|
-            if options.kind_of? String then
-              return self.new options
-            end
+      module Methods
+        include MethodsBase
 
-            # change id to name
-            if options.has_key? :id then
-              options[:name] = options.delete :id
-            end
+        def add_ganglia_init request = nil, xpath = nil
+          add_init_proc do |args = nil|
+            next if @data.has_key? :gmetad
 
-            klass.new GMetad.get_data(request, '/'), options
+            # work for gmetad request and rexml xpath
+            request = GMetad.get_request type, args unless request
+            xpath = GMetad.get_xpath type, args unless xpath
+
+            @data[:gmetad] = GMetad.get_data request, xpath
+            debug "Get GMetad Data #{@data[:gmetad].inspect}"
+            raise "No such #{type} - #{args}" if @data[:gmetad].nil?
           end
         end
       end

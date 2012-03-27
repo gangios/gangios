@@ -52,13 +52,13 @@ require File.join(File.dirname(__FILE__), "lib/gangios")
 # # same as:
 # Gangios::Base::Summary::Grid.new.clusters
 
-class Grid < Gangios::Base::Summary::Grid
+class Grid < Gangios::Base::Grid
 end
 g = Grid.new
 # puts g.data
 # puts Grid.model_name.singular_route_key
 # puts Grid.attribute_names
-# puts Grid.initialize_procs
+# puts Grid.init_procs
 
 # class Cluster < Gangios::Base::Summary::Cluster
 # end
@@ -68,14 +68,27 @@ g = Grid.new
 # puts Cluster.attribute_names
 
 # puts g.hosts.up
+# g.clusters.each do |c|
+#   puts c.name, c.gridname
+#   c.hosts.each do |h|
+#     puts h.name, h.clustername, h.gridname
+#     h.metrics.each do |m|
+#       puts "#{m.name}: #{m.val}", m.desc
+#     end
+#   end
+# end
+
 g.clusters.each do |c|
   puts c.name, c.gridname
-  c.metrics.each do |m|
-    puts "#{m.name}: #{m.val}", m.desc
+  # c.metrics.each do |m|
+  #   puts "#{m.name}: #{m.val}", m.desc
+  # end
+  # puts c.hosts.up
+  c.hosts.each do |h|
+    puts h.name
   end
 end
 
-g.clusters.each
 # Gangios::Base::Grid.new
 # Gangios::Base::Cluster.new 'clustername'
 # Gangios::Base::Host.new 'hostname'

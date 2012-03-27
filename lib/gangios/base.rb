@@ -18,66 +18,74 @@ module Gangios
           raise ArgumentError
         end
 
-        call_initialize_procs
+        call_init_procs
       end
     end
 
-    module Summary
-    # ##############################
-    # Summary data
-      class Grid
-        include Document
-        def_grid_init
-      end
-
-      class Cluster
-        include Document
-        def_cluster_init
-      end
-
-      class Metric
-        include Document
-
-        def initialize metric, cluster = nil, grid = nil
-          args = {}
-
-          if metric.kind_of? Hash then
-            @data = metric
-          elsif metric.kind_of? String and host.kind_of? String then
-            @data = {}
-            args[:metric] = metric
-            args[:cluster] = cluster if cluster.kind_of? String
-            args[:grid] = grid if grid.kind_of? String
-          else
-            raise ArgumentError
-          end
-
-          call_initialize_procs args
-        end
-      end
-    end
-
-    # ##############################
-    # All data
     class Grid
       include Document
-      def_grid_init
+
+      def initialize grid = nil
+        args = {}
+
+        if grid.kind_of? Hash then
+          @data = grid
+        elsif grid.nil? or grid.kind_of? String then
+          @data = {}
+          args[:grid] = grid
+        else
+          raise ArgumentError
+        end
+
+        call_init_procs args
+      end
     end
 
     class Cluster
       include Document
-      def_cluster_init
+
+      def initialize cluster, grid = nil
+        args = {}
+
+        if cluster.kind_of? Hash then
+          @data = cluster
+        elsif cluster.kind_of? String then
+          @data = {}
+          args[:cluster] = cluster
+          args[:grid] = grid if grid.kind_of? String
+        else
+          raise ArgumentError
+        end
+
+        call_init_procs args
+      end
     end
 
     class Host
       include Document
-      def_host_init
+
+      def initialize host, cluster = nil, grid = nil
+        args = {}
+
+        if host.kind_of? Hash then
+          @data = host
+        elsif host.kind_of? String then
+          @data = {}
+          args[:host] = host
+          args[:cluster] = cluster if cluster.kind_of? String
+          args[:grid] = grid if grid.kind_of? String
+        else
+          raise ArgumentError
+        end
+
+        call_init_procs args
+      end
     end
 
     class Metric
       include Document
 
-      def initialize metric, host, cluster = nil, grid = nil
+      def initialize metric, host = nil, cluster = nil, grid = nil
         args = {}
 
         if metric.kind_of? Hash then
@@ -92,7 +100,28 @@ module Gangios
           raise ArgumentError
         end
 
-        call_initialize_procs args
+        call_init_procs args
+      end
+    end
+
+    class Metrics
+      include Document
+
+      def initialize metric, cluster = nil, grid = nil
+        args = {}
+
+        if metric.kind_of? Hash then
+          @data = metric
+        elsif metric.kind_of? String then
+          @data = {}
+          args[:metric] = metric
+          args[:cluster] = cluster if cluster.kind_of? String
+          args[:grid] = grid if grid.kind_of? String
+        else
+          raise ArgumentError
+        end
+
+        call_init_procs args
       end
     end
   end

@@ -33,5 +33,59 @@ module Gangios
       xpath = '/GANGLIA_XML' + xpath
       doc.elements[xpath]
     end
+
+    def self.get_xpath type, args = nil
+      case type
+      when :grid
+        xpath = "/GRID"
+        xpath += "[@NAME='#{args[:grid]}']" if args[:grid]
+        xpath
+      when :cluster
+        xpath = "/GRID"
+        xpath += "[@NAME='#{args[:grid]}']" if args[:grid]
+        xpath += "/CLUSTER"
+        xpath += "[@NAME='#{args[:cluster]}']"
+        xpath
+      when :host
+        xpath = "/GRID"
+        xpath += "[@NAME='#{args[:grid]}']" if args[:grid]
+        xpath += "/CLUSTER"
+        xpath += "[@NAME='#{args[:cluster]}']" if args[:cluster]
+        xpath += "/HOST"
+        xpath += "[@NAME='#{args[:host]}']"
+        xpath
+      when :metric
+        xpath = "/GRID"
+        xpath += "[@NAME='#{args[:grid]}']" if args[:grid]
+        xpath += "/CLUSTER"
+        xpath += "[@NAME='#{args[:cluster]}']" if args[:cluster]
+        xpath += "/HOST"
+        xpath += "[@NAME='#{args[:host]}']"
+        xpath += "/METRIC"
+        xpath += "[@NAME='#{args[:metric]}']"
+        xpath
+      end
+    end
+
+    def self.get_request type, args = nil
+      case type
+      when :grid
+        "/"
+      when :cluster
+        "/#{args[:cluster]}"
+      when :host
+        if args[:cluster] then
+          "/#{args[:cluster]}/#{args[:host]}"
+        else
+          "/"
+        end
+      when :metric
+        if args[:cluster] then
+          "/#{args[:cluster]}/#{args[:host]}"
+        else
+          "/"
+        end
+      end
+    end
   end
 end
