@@ -80,41 +80,55 @@ g = Grid.new
 # end
 
 # g.clusters.each do |c|
-#   puts c.name, c.gridname
-#   # c.metrics.each do |m|
-#   #   puts "#{m.name}: #{m.val}", m.desc
-#   # end
-#   # puts c.hosts.up
+#   # puts c.name, c.gridname
+#   c.metrics.each do |m|
+#     puts "#{m.name}: #{m.val}", m.desc
+#   end
+#   puts c.hosts_up
 #   c.hosts.each do |h|
 #     puts h.name
 #     h.metrics.each do |m|
-#     	# puts "#{m.name}: #{m.val}", m.desc
+#     	puts "#{m.name}: #{m.val}", m.desc
 #     end
 #   end
+
+#   # puts c.data
 # end
 
+
+g = Grid.new
 g.clusters.each do |c|
   puts c.name, c.gridname
-  # c.metrics.each {}
   c.metrics.each do |m|
-    # puts "#{m.name}: #{m.val}", m.desc
+    puts m.name
+    puts m.val
   end
-  # puts c.hosts.up
-  # puts c.data
   c.hosts.each do |h|
     puts h.name
-    # h.metrics.each {}
     h.metrics.each do |m|
-      # puts "#{m.name}: #{m.val}", m.desc
+      puts m.name
+      puts m.val
     end
   end
 end
 
-doc = Gangios::GMetad.get_data "/?filter=summary"
-# puts doc
-doc.elements.each 'METRICS' do |m|
-  puts m.attribute('SUM')
-end
+
+# doc = Gangios::GMetad.get_data "/?filter=summary"
+# doc.elements.each 'METRICS' do |m|
+# 	puts m.attribute('NAME')
+# 	puts m.attribute('SUM')
+# end
+# doc = Gangios::GMetad.get_data "/"
+  
+# doc.elements.each 'CLUSTER' do |c|
+# 	puts c.attribute('NAME')
+# 	c.elements.each 'HOST' do |h|
+# 		h.elements.each 'METRIC' do |m|
+# 			puts m.attribute('NAME')
+# 			puts m.attribute('VAL')
+# 		end
+# 	end
+# end
 
 # normal = Gangios::GMetad.get_doc "/"
 # summary = Gangios::GMetad.get_doc "/?filter=summary"
@@ -122,5 +136,5 @@ end
 # Gangios::Base::Grid.new
 # Gangios::Base::Cluster.new 'clustername'
 # Gangios::Base::Host.new 'hostname'
-puts middle - start
+puts Time.new - middle
 puts Time.new - start

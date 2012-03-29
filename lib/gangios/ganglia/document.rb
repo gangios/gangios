@@ -23,10 +23,11 @@ module Gangios
           suffix = request_suffix
 
           add_init_proc do |args|
-            if @data.has_key? database then
-              raise "Unexpected data" unless @data[database].attribute('NAME') == args[type]
-              next
-            end
+            # if @data.has_key? database then
+            #   raise "Unexpected data" unless @data[database].attribute('NAME') == args[type]
+            #   next
+            # end
+            next if @data.has_key? database
 
             # work for gmetad request and rexml xpath
             request = GMetad.get_request(type, args) + suffix unless request
@@ -101,15 +102,13 @@ module Gangios
           # get klass:Class from classname:String
           classname = name.to_s.chop.capitalize
 
-          klass = options[:klass] || classname.to_class(Gangios::Base)
+          klass = options[:klass] || classname.to_class(Base)
           xpath = options[:xpath] || "#{name.to_s.chop.upcase}"
           sort = options[:sort] || plugin_name
           enumerator = options[:enumerator] || Base::Enumerator
-          type = self.to_s.split('::').last.downcase.to_sym
           debug "Create Has_Many #{name} use enumerator #{enumerator} sort #{sort}"
 
           safe_define_method name do |options = {}|
-            options[type] = self.name
             options[:xpath] = xpath
             enumerator.new klass, sort, @data, options
           end
@@ -120,7 +119,7 @@ module Gangios
           # get klass:Class from classname:String
           classname = name.to_s.capitalize
 
-          klass = options[:klass] || classname.to_class(Gangios::Base)
+          klass = options[:klass] || classname.to_class(Base)
           xpath = options[:xpath] || ".."
 
           safe_define_method name do |options = {}|
@@ -138,6 +137,23 @@ module Gangios
 
         def request_suffix
           ""
+        end
+      end
+    end
+
+    module GangliaSummary
+      def self.included base
+        base.extend Methods
+      end
+
+      module Methods
+        include Ganglia::MethodsBase
+        def plugin_name
+          :gmetad_summary
+        end
+
+        def request_suffix
+          "?filter=summary"
         end
       end
     end

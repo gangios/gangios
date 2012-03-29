@@ -33,7 +33,7 @@ module Gangios
       doc = GMetad.get_doc request
       xpath = '/GANGLIA_XML' + xpath
       doc = doc.elements[xpath]
-      debug "Get GMetad Data by request #{request} xpath #{xpath} #{doc.inspect}"
+      debug "Get GMetad Data by request #{request} xpath #{xpath} #{doc.inspect}", false, :green
       doc
     end
 

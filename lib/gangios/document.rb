@@ -10,15 +10,15 @@ module Gangios
 
     def call_init_procs args = nil
       klass = self.class
-      procs = []
+      procs = {}
       until klass == Object
         kprocs = klass.init_procs
-        procs += kprocs.values if kprocs
+        procs = kprocs.merge procs if kprocs
         klass = klass.superclass
       end
 
       debug "Initialize #{self.class} instance, exec #{procs}, data: #{@data}", true
-      procs.each do |proc|
+      procs.each do |plugin, proc|
         # self.send proc, args
         self.instance_exec args, &proc
       end
@@ -30,10 +30,10 @@ module Gangios
       attr_accessor :init_procs
       attr_accessor :attr_names
 
-      def add_init_proc &block
-        debug "Add #{plugin_name} initialize proc to #{self}"
+      def add_init_proc name = plugin_name, &block
+        debug "Add #{name} initialize proc to #{self}"
         self.init_procs = {} if self.init_procs.nil?
-        self.init_procs[plugin_name] = block
+        self.init_procs[name] = block
       end
 
       def add_attribute_names attribute

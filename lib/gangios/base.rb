@@ -27,7 +27,7 @@ module Gangios
         procs = {}
         until klass == Object
           kprocs = klass.each_procs
-          procs.merge! kprocs if kprocs
+          procs = kprocs.merge procs if kprocs
           klass = klass.superclass
         end
 
@@ -39,7 +39,7 @@ module Gangios
           procs.each do |plugin, proc|
             self.instance_exec name, &proc
           end
-          yield @klass.new @each_data, name
+          yield @klass.new @each_data.clone, name
           name = self.instance_exec false, &first
         end
       end
@@ -47,16 +47,10 @@ module Gangios
       module Methods
         attr_accessor :each_procs
 
-        def add_each_proc &block
-          debug "Add #{plugin_name} each proc to #{self}"
+        def add_each_proc name = plugin_name, &block
+          debug "Add #{name} each proc to #{self}"
           self.each_procs = {} if self.each_procs.nil?
-          self.each_procs[plugin_name] = block
-        end
-
-        def insert_each_proc &block
-          debug "Add #{plugin_name} each proc to #{self}"
-          self.each_procs = [] if self.each_procs.nil?
-          self.each_procs[plugin_name] = block
+          self.each_procs[name] = block
         end
       end
       extend Methods
