@@ -1,7 +1,8 @@
 #!/usr/bin/env ruby
-$debug = true
+# $debug = true
+start = Time.new
 require File.join(File.dirname(__FILE__), "lib/gangios")
-
+middle = Time.new
 # # generate metric from Ruby and send it over UDP
 # Gangios::GMetric.send(
 #   :name => 'send_requests',
@@ -78,17 +79,48 @@ g = Grid.new
 #   end
 # end
 
+# g.clusters.each do |c|
+#   puts c.name, c.gridname
+#   # c.metrics.each do |m|
+#   #   puts "#{m.name}: #{m.val}", m.desc
+#   # end
+#   # puts c.hosts.up
+#   c.hosts.each do |h|
+#     puts h.name
+#     h.metrics.each do |m|
+#     	# puts "#{m.name}: #{m.val}", m.desc
+#     end
+#   end
+# end
+
 g.clusters.each do |c|
   puts c.name, c.gridname
-  # c.metrics.each do |m|
-  #   puts "#{m.name}: #{m.val}", m.desc
-  # end
+  # c.metrics.each {}
+  c.metrics.each do |m|
+    # puts "#{m.name}: #{m.val}", m.desc
+  end
   # puts c.hosts.up
+  # puts c.data
   c.hosts.each do |h|
     puts h.name
+    # h.metrics.each {}
+    h.metrics.each do |m|
+      # puts "#{m.name}: #{m.val}", m.desc
+    end
   end
 end
+
+doc = Gangios::GMetad.get_data "/?filter=summary"
+# puts doc
+doc.elements.each 'METRICS' do |m|
+  puts m.attribute('SUM')
+end
+
+# normal = Gangios::GMetad.get_doc "/"
+# summary = Gangios::GMetad.get_doc "/?filter=summary"
 
 # Gangios::Base::Grid.new
 # Gangios::Base::Cluster.new 'clustername'
 # Gangios::Base::Host.new 'hostname'
+puts middle - start
+puts Time.new - start

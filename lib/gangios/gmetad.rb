@@ -25,13 +25,16 @@ module Gangios
       ensure
         s.close
       end
+      
       return doc
     end
 
-    def self.get_data request, xpath = ''
+    def self.get_data request, xpath = '/GRID'
       doc = GMetad.get_doc request
       xpath = '/GANGLIA_XML' + xpath
-      doc.elements[xpath]
+      doc = doc.elements[xpath]
+      debug "Get GMetad Data by request #{request} xpath #{xpath} #{doc.inspect}"
+      doc
     end
 
     def self.get_xpath type, args = nil

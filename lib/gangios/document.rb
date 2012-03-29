@@ -4,63 +4,55 @@ module Gangios
   module Document
     def self.included base
       base.extend(Methods)
-      base.def_attribute_names
-      base.def_init_procs
-      base.def_model_name
     end
 
     attr_accessor :data
 
+    def call_init_procs args = nil
+      klass = self.class
+      procs = []
+      until klass == Object
+        kprocs = klass.init_procs
+        procs += kprocs.values if kprocs
+        klass = klass.superclass
+      end
+
+      debug "Initialize #{self.class} instance, exec #{procs}, data: #{@data}", true
+      procs.each do |proc|
+        # self.send proc, args
+        self.instance_exec args, &proc
+      end
+    end
+
     module Methods
       include Define
 
-      def def_init_procs
-        @@init_procs = {} unless defined? @@init_procs
-        klass = self
+      attr_accessor :init_procs
+      attr_accessor :attr_names
 
-        safe_define_method :call_init_procs do |args = nil|
-          procs = @@init_procs[klass] || {}
-          debug "Initialize #{self.class} instance, exec #{procs}, data: #{@data}", true
-          procs.each do |plugin, proc|
-            self.instance_exec args, &proc
-          end
-        end
+      def add_init_proc &block
+        debug "Add #{plugin_name} initialize proc to #{self}"
+        self.init_procs = {} if self.init_procs.nil?
+        self.init_procs[plugin_name] = block
+      end
 
-        safe_define_class_method :init_procs do |&block|
-          @@init_procs[klass]
-        end
+      def add_attribute_names attribute
+        self.attr_names = [] if self.attr_names.nil?
+        self.attr_names << attribute
+      end
 
-        safe_define_class_method :add_init_proc do |&block|
-          debug "Add #{plugin} initialize proc to #{self}"
-          @@init_procs[klass] = {} if @@init_procs[klass].nil?
-          @@init_procs[klass][plugin] = block
-        end
-
-        safe_define_class_method :del_init_proc do |plugin|
-          debug "Del #{plugin} initialize proc to #{self}"
-          @@init_procs[klass] = {} if @@init_procs[klass].nil?
-          @@init_procs[klass].delete plugin
+      def attribute_names
+        klass = self.class
+        names = []
+        until klass == Object
+          knames = klass.attr_names
+          names += knames.values if knames
+          klass = klass.superclass
         end
       end
 
-      def def_attribute_names
-        @@attribute_names = {} unless defined? @@attribute_names
-        klass = self
-
-        safe_define_class_method :attribute_names do
-          @@attribute_names[klass]
-        end
-
-        safe_define_class_method :add_attribute_names do |attribute|
-          @@attribute_names[klass] = [] if @@attribute_names[klass].nil?
-          @@attribute_names[klass] << attribute
-        end
-      end
-
-      def def_model_name
-        safe_define_class_method :model_name do
-          Name.new self
-        end
+      def model_name
+        Name.new self
       end
 
       class Name

@@ -11,64 +11,62 @@ module Gangios
         @xpath = @options.delete :xpath
         debug "Get Parms xpath: #{@xpath}, klass: #{@klass}, options: #{options}"
 
-        if @klass == Host then
-          # if defined Document::Ganglia
-          # get the normal data from gmetad 
-          unless @data[:gmetad] then
-            request = '/'
-            request += "#{@options[:cluster]}" if @options[:cluster]
-            @data[:gmetad] = GMetad.get_data request, '/GRID'
-            debug "Get GMetad Data #{@data[:gmetad].inspect}"
-          end
-        end
-
         next if @data[:gmetad_summary]
         @data[:gmetad_summary] = GMetad.get_data '/?filter=summary'
       end
 
-      safe_define_method :each do |&block|
-        @data[:gmetad_summary].elements.each @xpath do |data|
-          # debug "Enumerator.each called, xpath: #{@xpath}, data: #{data.inspect}"
-          block.call @klass.new @data.merge({gmetad_summary: data})
-        end
+      add_each_proc do |name|
+        each_data = @each_data[:gmetad_summary]
+        next unless each_data
+        data = each_data.elements[@xpath] if name.kind_of? TrueClass
+        data = each_data.next_element if name.kind_of? FalseClass
+        data = @data.elements["#{@xpath}[@NAME='#{name}']"] if name.kind_of? String
 
-        self
+        @each_data.merge! gmetad_summary: data
+        ret = data.attribute('NAME') if data
+        next ret
       end
     end
 
-    class Hosts < Enumerator
+    class EnumHost < Enumerator
       field :up, type: :Integer, xpath: 'HOSTS'
       field :down, type: :Integer, xpath: 'HOSTS'
 
-      if defined? Document::Ganglia then
-        re_define_method :each do |&block|
-          @data[:gmetad].elements.each @xpath do |data|
-            # debug "Enumerator.each called, xpath: #{@xpath}, data: #{data.inspect}"
+      add_init_proc do
+        next unless defined? Document::Ganglia
 
-            block.call @klass.new @data.merge({gmetad: data})
+        # if defined Document::Ganglia
+        # get the normal data from gmetad 
+        unless @data[:gmetad] then
+          name = @options[:cluster]
+          if name then
+            request = "/#{name}"
+            xpath = "/GRID/CLUSTER[@NAME='#{name}']"
+          else
+            request = '/'
+            xpath = '/GRID'
           end
+          @data[:gmetad] = GMetad.get_data request, xpath
         end
-
-        self
       end
     end
 
     class Grid
       include Document::GangliaSummary
-      add_ganglia_summary_init
+      add_ganglia_init
 
       field :name, type: :String
       field :authority, type: :String
       field :localtime, type: :Integer
 
       has_many :clusters
-      has_many :hosts, enumerator: Hosts
+      has_many :hosts, enumerator: EnumHost, sort: :gmetad, xpath: "CLUSTER/HOST"
       has_many :metrics, klass: Metrics, xpath: 'METRICS'
     end
 
     class Cluster
       include Document::GangliaSummary
-      add_ganglia_summary_init
+      add_ganglia_init
 
       field :name, type: :String
       field :localtime, type: :Integer
@@ -77,13 +75,13 @@ module Gangios
       field :url, type: :String
       field :gridname, type: :Custom, xpath: '..', attribute: 'NAME'
 
-      has_many :hosts, enumerator: Hosts
+      has_many :hosts, enumerator: EnumHost, sort: :gmetad
       has_many :metrics, klass: Metrics, xpath: 'METRICS'
     end
 
     class Metrics
       include Document::GangliaSummary
-      add_ganglia_summary_init
+      add_ganglia_init
 
       field :name, type: :String
       field :sum, type: :Metric

@@ -8,23 +8,25 @@ module Gangios
       include Document::Ganglia
 
       unless defined? Document::GangliaSummary then
-        add_initialize_proc do
+        add_init_proc do
           @xpath = @options.delete :xpath
           debug "Get Parms xpath: #{@xpath}"
 
           next if @data.has_key? :gmetad
-
           @data[:gmetad] = GMetad.get_data '/'
         end
       end
 
-      safe_define_method :each do |&block|
-        @data[:gmetad].elements.each @xpath do |data|
-          # debug "Enumerator.each called, xpath: #{@xpath}, data: #{data.inspect}"
-          block.call @klass.new @data.merge({gmetad: data})
-        end
+      add_each_proc do |name|
+        each_data = @each_data[:gmetad]
+        next unless each_data
+        data = each_data.elements[@xpath] if name.kind_of? TrueClass
+        data = each_data.next_element if name.kind_of? FalseClass
+        data = @data.elements["#{@xpath}[@NAME='#{name}']"] if name.kind_of? String
 
-        self
+        @each_data.merge! gmetad: data
+        ret = data.attribute('NAME') if data
+        next ret
       end
     end
 
@@ -37,7 +39,7 @@ module Gangios
       field :localtime, type: :Integer
 
       has_many :clusters
-      has_many :hosts
+      has_many :hosts, xpath: "/CLUSTER/HOST"
     end
 
     class Cluster
@@ -69,7 +71,7 @@ module Gangios
       field :gridname, type: :Custom, xpath: '../..', attribute: 'NAME'
       field :clustername, type: :Custom, xpath: '..', attribute: 'NAME'
 
-      has_many :metrics
+      has_many :metrics, sort: :gmetad
     end
 
     class Metric

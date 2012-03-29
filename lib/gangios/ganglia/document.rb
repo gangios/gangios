@@ -9,21 +9,31 @@ module Gangios
 
       module MethodsBase
         include Define
-        def plugin
+        def plugin_name
           :gmetad
         end
 
+        def request_suffix
+          ""
+        end
+
         def add_ganglia_init request = nil, xpath = nil
-          add_init_proc do |args = nil|
-            next if @data.has_key? :gmetad
+          type = self.to_s.split('::').last.downcase.to_sym
+          database = plugin_name
+          suffix = request_suffix
+
+          add_init_proc do |args|
+            if @data.has_key? database then
+              raise "Unexpected data" unless @data[database].attribute('NAME') == args[type]
+              next
+            end
 
             # work for gmetad request and rexml xpath
-            request = GMetad.get_request type, args unless request
+            request = GMetad.get_request(type, args) + suffix unless request
             xpath = GMetad.get_xpath type, args unless xpath
 
-            @data[:gmetad] = GMetad.get_data request, xpath
-            debug "Get GMetad Data #{@data[:gmetad].inspect}"
-            raise "No such #{type} - #{args}" if @data[:gmetad].nil?
+            @data[database] = GMetad.get_data request, xpath
+            raise "No such #{type} - #{args}" if @data[database].nil?
           end
         end
 
@@ -32,7 +42,7 @@ module Gangios
         # the attribute return a string
         def field(name, options = {})
           type = options[:type]
-          database = options[:database] || plugin
+          database = options[:database] || plugin_name
           debug "Create Field #{name} as #{type} use database #{database}"
           unless [:String, :Integer, :Float, :Metric, :Extra, :Custom].include? type
             raise ArgumentError, "unknown type - #{type}"
@@ -45,11 +55,12 @@ module Gangios
           end
 
           self.add_attribute_names name
+          xpath = options[:xpath]
+          attr_name = options[:attribute] || name.to_s.upcase
 
           safe_define_method name do
             element = @data[database]
-            element = element.elements[options[:xpath]] if options.has_key? :xpath
-            attr_name = options[:attribute] || name.to_s.upcase
+            element = element.elements[xpath] if xpath
             attribute = element.attribute(attr_name).to_s if element
 
             case type
@@ -91,13 +102,16 @@ module Gangios
           classname = name.to_s.chop.capitalize
 
           klass = options[:klass] || classname.to_class(Gangios::Base)
-          xpath = options[:xpath] || "//#{name.to_s.chop.upcase}"
+          xpath = options[:xpath] || "#{name.to_s.chop.upcase}"
+          sort = options[:sort] || plugin_name
           enumerator = options[:enumerator] || Base::Enumerator
+          type = self.to_s.split('::').last.downcase.to_sym
+          debug "Create Has_Many #{name} use enumerator #{enumerator} sort #{sort}"
 
           safe_define_method name do |options = {}|
-            options[:cluster] = name if self.class == Base::Cluster
+            options[type] = self.name
             options[:xpath] = xpath
-            enumerator.new klass, @data, options
+            enumerator.new klass, sort, @data, options
           end
         end
 
@@ -117,20 +131,13 @@ module Gangios
       end
 
       module Methods
-        include MethodsBase
+        include Ganglia::MethodsBase
+        def plugin_name
+          :gmetad
+        end
 
-        def add_ganglia_init request = nil, xpath = nil
-          add_init_proc do |args = nil|
-            next if @data.has_key? :gmetad
-
-            # work for gmetad request and rexml xpath
-            request = GMetad.get_request type, args unless request
-            xpath = GMetad.get_xpath type, args unless xpath
-
-            @data[:gmetad] = GMetad.get_data request, xpath
-            debug "Get GMetad Data #{@data[:gmetad].inspect}"
-            raise "No such #{type} - #{args}" if @data[:gmetad].nil?
-          end
+        def request_suffix
+          ""
         end
       end
     end
