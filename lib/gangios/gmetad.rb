@@ -9,6 +9,10 @@ module Gangios
       @@host, @@port = host, port
     end
 
+    def self.socket
+      return @@host, @@port
+    end
+
     def self.ready?
       TCPSocket.new(@@host, @@port) rescue return false
       return true

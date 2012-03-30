@@ -45,7 +45,7 @@ module Gangios
           type = options[:type]
           database = options[:database] || plugin_name
           debug "Create Field #{name} as #{type} use database #{database}"
-          unless [:String, :Integer, :Float, :Metric, :Extra, :Custom].include? type
+          unless [:String, :Integer, :Float, :Metric, :Extra].include? type
             raise ArgumentError, "unknown type - #{type}"
           end
           if type == :Extra then
@@ -85,8 +85,6 @@ module Gangios
               else
                 return attribute
               end
-            when :Custom
-              return attribute
             end
           end
 
@@ -146,6 +144,17 @@ module Gangios
         base.extend Methods
       end
 
+      def get_data_by_summary(cluster)
+        if cluster then
+          request = "/#{cluster}"
+          xpath = "/GRID/CLUSTER[@NAME='#{cluster}']"
+
+          @data[:gmetad] = GMetad.get_data request, xpath
+        else
+          @data[:gmetad] = GMetad.get_data '/'
+        end
+      end
+      
       module Methods
         include Ganglia::MethodsBase
         def plugin_name

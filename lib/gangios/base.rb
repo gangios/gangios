@@ -34,13 +34,13 @@ module Gangios
         debug "#{self.class}.each called, exec #{procs}, data #{@data} sort by #{@sort}", true
         first = procs.delete @sort
         @each_data = @data.clone
-        name = self.instance_exec true, &first
+        name = self.instance_exec nil, true, &first
         while name do
           procs.each do |plugin, proc|
             self.instance_exec name, &proc
           end
           yield @klass.new @each_data.clone, name
-          name = self.instance_exec false, &first
+          name = self.instance_exec nil, false, &first
         end
       end
 

@@ -6,11 +6,11 @@ module Gangios
 
     # struct of slope
     SLOPE = {
-      'zero'        => 0,
-      'positive'    => 1,
-      'negative'    => 2,
-      'both'        => 3,
-      'unspecified' => 4
+      :zero         => 0,
+      :positive     => 1,
+      :negative     => 2,
+      :both         => 3,
+      :unspecified  => 4
     }
 
     # send metric data
@@ -34,7 +34,7 @@ module Gangios
         :group    => '',
         :spoof    => 0,
         :units    => '',
-        :slope    => 'both',
+        :slope    => :both,
         :tmax     => 60,
         :dmax     => 0
       }.merge(metric)
@@ -97,7 +97,7 @@ module Gangios
       pack_uint(len)
 
       # pad the string
-      len = ((len+3) / 4) * 4
+      len = ((len + 3) / 4) * 4
       data = data + ("\0" * (len - data.size))
       @data << data
     end

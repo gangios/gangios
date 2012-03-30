@@ -54,6 +54,7 @@ middle = Time.new
 # Gangios::Base::Summary::Grid.new.clusters
 
 class Grid < Gangios::Base::Grid
+  
 end
 g = Grid.new
 # puts g.data
@@ -96,38 +97,51 @@ g = Grid.new
 # end
 
 
-g = Grid.new
-g.clusters.each do |c|
-  puts c.name, c.gridname
-  c.metrics.each do |m|
-    puts m.name
-    puts m.val
-  end
-  c.hosts.each do |h|
-    puts h.name
-    h.metrics.each do |m|
-      puts m.name
-      puts m.val
+# n = 10
+
+t = Time.new
+# n.times do
+  g = Grid.new
+  g.clusters.each do |c|
+    c.metrics.each do |m|
+      puts m.name, m.val
     end
+    c.hosts.each do |h|
+      puts h.name
+      h.metrics.each do |m|
+        puts m.name, m.val
+      end
+    end
+    puts c.data
   end
-end
-
-
-# doc = Gangios::GMetad.get_data "/?filter=summary"
-# doc.elements.each 'METRICS' do |m|
-# 	puts m.attribute('NAME')
-# 	puts m.attribute('SUM')
 # end
-# doc = Gangios::GMetad.get_data "/"
-  
-# doc.elements.each 'CLUSTER' do |c|
-# 	puts c.attribute('NAME')
-# 	c.elements.each 'HOST' do |h|
-# 		h.elements.each 'METRIC' do |m|
-# 			puts m.attribute('NAME')
-# 			puts m.attribute('VAL')
-# 		end
-# 	end
+t1 = Time.new - t
+
+# t = Time.new
+# n.times do
+#   doc = Gangios::GMetad.get_data "/?filter=summary"
+#   doc.elements.each 'METRICS' do |m|
+#     puts m.attribute('NAME'), m.attribute('SUM')
+#   end
+#   doc = Gangios::GMetad.get_data "/"
+    
+#   doc.elements.each 'CLUSTER' do |c|
+#     puts c.attribute('NAME')
+#     c.elements.each 'HOST' do |h|
+#       h.elements.each 'METRIC' do |m|
+#         puts m.attribute('NAME'), m.attribute('VAL')
+#       end
+#     end
+#   end
+# end
+# t2 = Time.new - t
+# puts t1, t2
+
+# s = Gangios::Nagios::Status.new
+# s.parsestatus('/home/bbtfr/Downloads/nagios/t/var/status.dat')
+# s = s.status
+# s[:hosts]["host1"].each do |a, b|
+#   puts a, b
 # end
 
 # normal = Gangios::GMetad.get_doc "/"

@@ -4,3 +4,5 @@ source 'http://gem.taobap.org'
 gemspec
 
 gem "rspec"
+gem "nagios-manage"
+gem "gmetad"
