@@ -99,23 +99,23 @@ g = Grid.new
 
 # n = 10
 
-t = Time.new
-# n.times do
-  g = Grid.new
-  g.clusters.each do |c|
-    c.metrics.each do |m|
-      puts m.name, m.val
-    end
-    c.hosts.each do |h|
-      puts h.name
-      h.metrics.each do |m|
-        puts m.name, m.val
-      end
-    end
-    puts c.data
-  end
-# end
-t1 = Time.new - t
+# t = Time.new
+# # n.times do
+#   g = Grid.new
+#   g.clusters.each do |c|
+#     c.metrics.each do |m|
+#       puts m.name, m.val
+#     end
+#     c.hosts.each do |h|
+#       puts h.name
+#       h.metrics.each do |m|
+#         puts m.name, m.val
+#       end
+#     end
+#     puts c.data
+#   end
+# # end
+# t1 = Time.new - t
 
 # t = Time.new
 # n.times do
@@ -152,3 +152,22 @@ t1 = Time.new - t
 # Gangios::Base::Host.new 'hostname'
 puts Time.new - middle
 puts Time.new - start
+
+# out = $stdout.clone
+$stdout = File.open('a.bmp', 'w+')
+require 'rrd'
+rrd = RRD::Base.new "/var/lib/ganglia/rrds/__SummaryInfo__/boottime.rrd"
+puts rrd.info
+rrd_file =  "/var/lib/ganglia/rrds/__SummaryInfo__/boottime.rrd"
+# puts RRD::Wrapper.info "/var/lib/ganglia/rrds/__SummaryInfo__/boottime.rrd"
+ret = RRD.graph '-', :title => "Test", :width => 800, :height => 250, :color => ["FONT#000000", "BACK#FFFFFF"] do
+  area rrd_file, :num => :average, :color => "#00FF00", :label => "CPU 0"
+  # line rrd_file, :cpu0 => :average, :color => "#007f3f"
+  # line rrd_file, :memory => :average, :color => "#0000FF", :label => "Memory"
+end
+
+# puts
+# puts ret
+
+# puts RRD::Wrapper.error
+# puts rrd.error

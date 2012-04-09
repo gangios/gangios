@@ -39,8 +39,8 @@ module Gangios
 
     class Hosts < Enumerator
       include GangliaSummary
-      field :up, type: :Integer
-      field :down, type: :Integer
+      field :up, type: 'Integer'
+      field :down, type: 'Integer'
 
       add_init_proc do
         next if @data[:gmetad]
@@ -56,11 +56,11 @@ module Gangios
       include Document::GangliaSummary
       add_ganglia_init
 
-      field :name, type: :String
-      field :authority, type: :String
-      field :localtime, type: :Integer
-      field :hosts_up, type: :Integer, xpath: 'HOSTS', attribute: 'UP'
-      field :hosts_down, type: :Integer, xpath: 'HOSTS', attribute: 'DOWN'
+      field :name, type: 'String'
+      field :authority, type: 'String'
+      field :localtime, type: 'Integer'
+      field :hosts_up, type: 'Integer', xpath: 'HOSTS', attribute: 'UP'
+      field :hosts_down, type: 'Integer', xpath: 'HOSTS', attribute: 'DOWN'
 
       has_many :clusters
       has_many :hosts, sort: :gmetad, xpath: "CLUSTER/HOST", enumerator: Hosts
@@ -71,14 +71,14 @@ module Gangios
       include Document::GangliaSummary
       add_ganglia_init
 
-      field :name, type: :String
-      field :localtime, type: :Integer
-      field :owner, type: :String
-      field :latlong, type: :String
-      field :url, type: :String
-      field :hosts_up, type: :Integer, xpath: 'HOSTS', attribute: 'UP'
-      field :hosts_down, type: :Integer, xpath: 'HOSTS', attribute: 'DOWN'
-      field :gridname, type: :String, xpath: '..', attribute: 'NAME'
+      field :name, type: 'String'
+      field :localtime, type: 'Integer'
+      field :owner, type: 'String'
+      field :latlong, type: 'String'
+      field :url, type: 'String'
+      field :hosts_up, type: 'Integer', xpath: 'HOSTS', attribute: 'UP'
+      field :hosts_down, type: 'Integer', xpath: 'HOSTS', attribute: 'DOWN'
+      field :gridname, type: 'String', xpath: '..', attribute: 'NAME'
 
       has_many :hosts, sort: :gmetad, enumerator: Hosts
       has_many :metrics, klass: Metrics, xpath: 'METRICS'
@@ -88,16 +88,16 @@ module Gangios
       include Document::Ganglia
       add_ganglia_init
 
-      field :name, type: :String
-      field :ip, type: :String
-      field :reported, type: :Integer
-      field :tn, type: :Integer
-      field :tmax, type: :Integer
-      field :dmax, type: :Integer
-      field :location, type: :String
-      field :gmond_started, type: :Integer
-      field :gridname, type: :String, xpath: '../..', attribute: 'NAME'
-      field :clustername, type: :String, xpath: '..', attribute: 'NAME'
+      field :name, type: 'String'
+      field :ip, type: 'String'
+      field :reported, type: 'Integer'
+      field :tn, type: 'Integer'
+      field :tmax, type: 'Integer'
+      field :dmax, type: 'Integer'
+      field :location, type: 'String'
+      field :gmond_started, type: 'Integer'
+      field :gridname, type: 'String', xpath: '../..', attribute: 'NAME'
+      field :clustername, type: 'String', xpath: '..', attribute: 'NAME'
 
       has_many :metrics, sort: :gmetad
     end
@@ -106,34 +106,34 @@ module Gangios
       include Document::Ganglia
       add_ganglia_init
 
-      field :name, type: :String
-      field :val, type: :Metric
-      field :type, type: :String
-      field :units, type: :String
-      field :tn, type: :Integer
-      field :tmax, type: :Integer
-      field :dmax, type: :Integer
-      field :group, type: :Extra
-      field :desc, type: :Extra
-      field :title, type: :Extra
-      field :gridname, type: :String, xpath: '../../..', attribute: 'NAME'
-      field :clustername, type: :String, xpath: '../..', attribute: 'NAME'
-      field :hostname, type: :String, xpath: '..', attribute: 'NAME'
+      field :name, type: 'String'
+      field :val, type: 'Metric'
+      field :type, type: 'String'
+      field :units, type: 'String'
+      field :tn, type: 'Integer'
+      field :tmax, type: 'Integer'
+      field :dmax, type: 'Integer'
+      field :group, type: 'Extra'
+      field :desc, type: 'Extra'
+      field :title, type: 'Extra'
+      field :gridname, type: 'String', xpath: '../../..', attribute: 'NAME'
+      field :clustername, type: 'String', xpath: '../..', attribute: 'NAME'
+      field :hostname, type: 'String', xpath: '..', attribute: 'NAME'
     end
 
     class Metrics
       include Document::GangliaSummary
       add_ganglia_init
 
-      field :name, type: :String
-      field :sum, type: :Metric
-      field :num, type: :Integer
-      field :type, type: :String
-      field :units, type: :String
-      field :group, type: :Extra
-      field :desc, type: :Extra
-      field :title, type: :Extra
-      field :owername, type: :String, xpath: '..', attribute: 'NAME'
+      field :name, type: 'String'
+      field :sum, type: 'Metric'
+      field :num, type: 'Integer'
+      field :type, type: 'String'
+      field :units, type: 'String'
+      field :group, type: 'Extra'
+      field :desc, type: 'Extra'
+      field :title, type: 'Extra'
+      field :owername, type: 'String', xpath: '..', attribute: 'NAME'
       alias_method :val, :sum
     end
   end

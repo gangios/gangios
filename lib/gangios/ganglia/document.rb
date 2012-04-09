@@ -45,11 +45,11 @@ module Gangios
           type = options[:type]
           database = options[:database] || plugin_name
           debug "Create Field #{name} as #{type} use database #{database}"
-          unless [:String, :Integer, :Float, :Metric, :Extra].include? type
+          unless %w(String Integer Float Metric Extra).include? type
             raise ArgumentError, "unknown type - #{type}"
           end
-          if type == :Extra then
-            type = :String
+          if type == 'Extra' then
+            type = 'String'
             options[:xpath] = "" unless options[:xpath]
             options[:xpath] += "EXTRA_DATA/EXTRA_ELEMENT[@NAME='#{name.to_s.upcase}']"
             options[:attribute] = "VAL"
@@ -65,13 +65,13 @@ module Gangios
             attribute = element.attribute(attr_name).to_s if element
 
             case type
-            when :String
+            when 'String'
               return attribute
-            when :Integer
+            when 'Integer'
               return attribute.to_i
-            when :Float
+            when 'Float'
               return attribute.to_f
-            when :Metric
+            when 'Metric'
               mtype = element.attribute('TYPE').to_s if element
 
               # ganglia check result has 5 types
